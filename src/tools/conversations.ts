@@ -5,31 +5,70 @@ import * as client from "../client.js";
 export function register(server: McpServer): void {
   server.tool(
     "salesloft_list_conversations",
-    "List conversations (Salesloft Conversations / Drift)",
+    "List Conversations recordings. Each item includes owner_id/user_guid (the rep), title, call_id, account, and duration.",
     {
       page: z.number().optional().describe("Page number"),
       per_page: z.number().min(1).max(100).optional().describe("Records per page"),
       sort_by: z.string().optional().describe("Field to sort by"),
       sort_direction: z.enum(["ASC", "DESC"]).optional().describe("Sort direction"),
-      user_guid: z.string().optional().describe("User UUID to filter by (defaults to authenticated user)"),
     },
-    async ({ user_guid, ...rest }) => {
-      let guid = user_guid;
-      if (!guid) {
-        const me = await client.get<{ data: { guid: string } }>("/me.json");
-        guid = me.data.guid;
-      }
-      const result = await client.get("/conversations/calls.json", { ...rest, user_guid: guid });
+    async (params) => {
+      const result = await client.get("/conversations.json", params);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
   );
 
   server.tool(
     "salesloft_get_conversation",
-    "Get a single conversation call by numeric ID or UUID (from recording URL)",
-    { id: z.union([z.number(), z.string()]).describe("Conversation call ID or UUID") },
+    "Get a single Conversation recording by its UUID. Returns owner_id/user_guid, title, call_id, account, and duration.",
+    { id: z.string().describe("Conversation UUID") },
     async ({ id }) => {
-      const result = await client.get(`/conversations/calls/${id}.json`);
+      const result = await client.get(`/conversations/${id}.json`);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
+
+  server.tool(
+    "salesloft_get_conversation_recording",
+    "Get the media for a Conversation: recording url, content_type, duration, and media_id.",
+    { id: z.string().describe("Conversation UUID") },
+    async ({ id }) => {
+      const result = await client.get(`/conversations/${id}/recording.json`);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
+
+  server.tool(
+    "salesloft_list_transcriptions",
+    "List transcriptions. Each item links to its conversation and exposes a sentences href for the transcript text.",
+    {
+      page: z.number().optional().describe("Page number"),
+      per_page: z.number().min(1).max(100).optional().describe("Records per page"),
+      sort_by: z.string().optional().describe("Field to sort by"),
+      sort_direction: z.enum(["ASC", "DESC"]).optional().describe("Sort direction"),
+    },
+    async (params) => {
+      const result = await client.get("/transcriptions.json", params);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
+
+  server.tool(
+    "salesloft_get_transcription",
+    "Get a single transcription's metadata by UUID (language, conversation link, sentences href).",
+    { id: z.string().describe("Transcription UUID") },
+    async ({ id }) => {
+      const result = await client.get(`/transcriptions/${id}.json`);
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
+
+  server.tool(
+    "salesloft_get_transcription_sentences",
+    "Get the transcript text for a recording: per-sentence text with start_time, end_time, order_number, and recording_attendee_id (speaker). Sort by order_number ascending to read in spoken order.",
+    { id: z.string().describe("Transcription UUID") },
+    async ({ id }) => {
+      const result = await client.get(`/transcriptions/${id}/sentences.json`);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
   );
