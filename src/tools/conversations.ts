@@ -11,17 +11,23 @@ export function register(server: McpServer): void {
       per_page: z.number().min(1).max(100).optional().describe("Records per page"),
       sort_by: z.string().optional().describe("Field to sort by"),
       sort_direction: z.enum(["ASC", "DESC"]).optional().describe("Sort direction"),
+      user_guid: z.string().optional().describe("User UUID to filter by (defaults to authenticated user)"),
     },
-    async (params) => {
-      const result = await client.get("/conversations/calls.json", params);
+    async ({ user_guid, ...rest }) => {
+      let guid = user_guid;
+      if (!guid) {
+        const me = await client.get<{ data: { guid: string } }>("/me.json");
+        guid = me.data.guid;
+      }
+      const result = await client.get("/conversations/calls.json", { ...rest, user_guid: guid });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
   );
 
   server.tool(
     "salesloft_get_conversation",
-    "Get a single conversation call by ID",
-    { id: z.number().describe("Conversation call ID") },
+    "Get a single conversation call by numeric ID or UUID (from recording URL)",
+    { id: z.union([z.number(), z.string()]).describe("Conversation call ID or UUID") },
     async ({ id }) => {
       const result = await client.get(`/conversations/calls/${id}.json`);
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
