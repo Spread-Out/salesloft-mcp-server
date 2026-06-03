@@ -4,36 +4,22 @@ A Model Context Protocol (MCP) server that provides full access to the Salesloft
 
 ## Setup
 
-### 1. Clone and install dependencies
+### 1. Get your Salesloft API key
 
-```bash
-git clone https://github.com/alyce-spreadai/salesloft-mcp-server salesloft-mcp-server
-cd salesloft-mcp-server
-npm install
-```
+Generate an API key at https://accounts.salesloft.com/oauth/applications.
 
-### 2. Build
+> 🔑 Treat this key like a password. It belongs **only** in your local MCP config file (below). Never paste it into a chat with Claude or any other AI, and never commit it.
 
-```bash
-npm run build
-```
+### 2. Add the server to your Claude client
 
-### 3. Get your Salesloft API key
-
-Generate an API key at https://accounts.salesloft.com/oauth/applications
-
-### 4. Configure in Claude Code or Claude Desktop
-
-Add the following block to either client — both will pick it up and run the server automatically. No additional setup required.
-
-> ⚠️ **You must replace `<ABSOLUTE_PATH_TO_REPO>` with the real path on your machine.** Relative paths and `~` will not work — Claude needs an absolute path. From inside the cloned repo, run `pwd` to print it, e.g. `/Users/jane/code/salesloft-mcp-server`.
+**Recommended — run straight from GitHub, no clone, no build, no paths to maintain.** `npx` fetches this repo, builds it automatically, and runs it. This is the config block to use:
 
 ```json
 {
   "mcpServers": {
     "salesloft": {
-      "command": "node",
-      "args": ["<ABSOLUTE_PATH_TO_REPO>/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "github:Spread-Out/salesloft-mcp-server"],
       "env": {
         "SALESLOFT_API_KEY": "your-api-key-here"
       }
@@ -42,14 +28,62 @@ Add the following block to either client — both will pick it up and run the se
 }
 ```
 
-**Where to put it:**
+(Requires Node.js 18+ on your machine — `node -v` to check.)
 
-- **Claude Code** — 
+#### Claude Desktop (most common)
 
+Claude Desktop has no install command — you edit a JSON config file by hand:
 
-After saving, the Salesloft tools (`salesloft_*`) will be available the next time the client launches.
+1. Open the config file (the app can do this for you: **Settings → Developer → Edit Config**), or open it directly:
+   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+2. Paste the block above. If the file already has an `mcpServers` object with other servers, **merge** the `salesloft` key into it rather than replacing the whole file. If the file is empty/new, paste the block as-is.
+3. Replace `your-api-key-here` with your key, save, then **fully quit and reopen** Claude Desktop (a window-close is not enough).
 
-## Available Tools (~60 tools)
+#### Claude Code (CLI)
+
+One command — substitute your key, then relaunch:
+
+```bash
+claude mcp add-json salesloft -s user '{"command":"npx","args":["-y","github:Spread-Out/salesloft-mcp-server"],"env":{"SALESLOFT_API_KEY":"your-api-key-here"}}'
+```
+
+`-s user` makes it available across all your projects; omit it to scope to the current project only. Run the command in your terminal (not in a Claude chat) so your key stays out of any transcript.
+
+### 3. Verify
+
+After restarting, the `salesloft_*` tools (e.g. `salesloft_get_me`) are available. In Claude Code, `claude mcp list` shows `salesloft`. Ask Claude to "list my Salesloft cadences" to confirm the key works.
+
+<details>
+<summary><strong>Alternative: local clone</strong> (for contributors or offline use)</summary>
+
+Only needed if you're modifying the server itself. The `npx` path above covers normal use.
+
+```bash
+git clone https://github.com/Spread-Out/salesloft-mcp-server.git
+cd salesloft-mcp-server
+npm install   # the "prepare" script runs the build automatically
+```
+
+Then point your config at the built file with an **absolute** path (`~` and relative paths will not work — run `pwd` inside the repo to get it):
+
+```json
+{
+  "mcpServers": {
+    "salesloft": {
+      "command": "node",
+      "args": ["/absolute/path/to/salesloft-mcp-server/dist/index.js"],
+      "env": {
+        "SALESLOFT_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+## Available Tools (~75 tools)
 
 ### People
 - `salesloft_list_people` - List/search/filter people
